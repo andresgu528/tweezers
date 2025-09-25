@@ -9,7 +9,14 @@ let makeNoise = {
   arg: "time",
   paramNames: ["frequencyOutput"],
   paramValues: [0],
-  func: "return Math.sin(2*Math.PI*frequencyOutput*time)"
+  func: `
+    let output = Math.sin(2*Math.PI*frequencyOutput*time);
+    if (output > 0) {
+      return 0.2;
+    } else {
+      return -0.2;
+    }
+  `
 }
 
 async function start_synth() {
@@ -17,7 +24,9 @@ async function start_synth() {
   btn.disabled = true;
   btn.textContent = "Keyboard activated";
   const devices = await NoiseMaker.enumerateAsync();
-  devices.forEach(device => printToOut(`Found output device: ${device.label}, id: ${device.deviceId}`));
+  devices.forEach(device => {
+    printToOut(`Found output device: ${device.label}, id: ${device.deviceId}`)
+  });
   const sound = new NoiseMaker();
   await sound.setUserFunction(makeNoise);
   printToOut("Keyboard activated.");
