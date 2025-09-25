@@ -44,6 +44,7 @@ async function start_synth() {
 
 async function btn_change() {
   if (!sound) {
+    printToOut("...");
     await start_synth();
     printToOut("Sound synthesizer started.");
     btn.textContent = "Disable";
