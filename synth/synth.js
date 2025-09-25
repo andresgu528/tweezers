@@ -3,14 +3,22 @@ import {NoiseMaker} from "./noisemaker.js";
 const btn = document.getElementById("start_btn");
 let sound_on = false;
 const tout = document.getElementById("synth_tout");
+tout.textContent = "...";
 btn.addEventListener("click", start_synth);
+let numKeysPressed = 0;
 
-let makeNoise = {
+const octaveBaseFrequency = 110;
+const availableKeys = "zsxcfvgbnjmk,l.";
+
+let sound;
+
+const makeNoise = {
   arg: "time",
   paramNames: ["frequencyOutput"],
   paramValues: [0],
   func: `
     let output = Math.sin(2*Math.PI*frequencyOutput*time);
+    //return output * 0.4;
     if (output > 0) {
       return 0.2;
     } else {
@@ -27,23 +35,30 @@ async function start_synth() {
   devices.forEach(device => {
     printToOut(`Found output device: ${device.label}, id: ${device.deviceId}`)
   });
-  const sound = new NoiseMaker();
+  sound = new NoiseMaker();
   await sound.setUserFunction(makeNoise);
   printToOut("Keyboard activated.");
   window.addEventListener("keydown", onKeyPress);
   window.addEventListener("keyup", onKeyRelease);
 
   function onKeyPress (event) {
-    let key = event.key;
-    if (key == "a") {
-      sound.updateParams([440]);
+    if (!event.repeat) {
+      let semitones = availableKeys.indexOf(event.key);
+      if (semitones >= 0) {
+        numKeysPressed += 1;
+        const frequencyOutput = octaveBaseFrequency * Math.pow(2, semitones/12);
+        sound.updateParams([frequencyOutput]);
+      }
     }
   }
 
   function onKeyRelease (event) {
-    let key = event.key;
-    if (key == "a") {
+    if (availableKeys.includes(event.key)) {
+      numKeysPressed -= 1;
+    }
+    if (numKeysPressed <= 0) {
       sound.updateParams([0]);
+      numKeysPressed = 0;
     }
   }
 }
