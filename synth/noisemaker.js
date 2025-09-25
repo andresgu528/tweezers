@@ -37,7 +37,9 @@ export class NoiseMaker {
     this.active = true;
   }
   updateParams(params) {
-    this.audioWorkletNode.port.postMessage(params);
+    if (this.audioContext) {
+      this.audioWorkletNode.port.postMessage(params);
+    }
   }
 };
 
