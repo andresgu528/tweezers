@@ -1,3 +1,7 @@
-#synth_tout, #start_btn {
-    display: block
+#control_btn {
+    display: block;
+}
+#synth_tout {
+    display: block;
+    width: 100%
 }

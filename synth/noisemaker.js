@@ -4,6 +4,15 @@ export class NoiseMaker {
     this.audioContext = new AudioContext({sampleRate});
     this.userFunction = null;
     this.audioWorkletNode = null;
+    this.active = false;
+  }
+  resume() {
+    this.audioContext.resume();
+    this.active = true;
+  }
+  async suspend() {
+    await this.audioContext.suspend();
+    this.active = false;
   }
   static async enumerateAsync() {
     let devices = (await navigator.mediaDevices.enumerateDevices())
@@ -25,6 +34,7 @@ export class NoiseMaker {
         }
     );
     this.audioWorkletNode.connect(this.audioContext.destination);
+    this.active = true;
   }
   updateParams(params) {
     this.audioWorkletNode.port.postMessage(params);
