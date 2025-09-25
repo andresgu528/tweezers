@@ -2,7 +2,7 @@ import {NoiseMaker} from "./noisemaker.js";
 
 const btn = document.getElementById("control_btn");
 const tout = document.getElementById("synth_tout");
-tout.textContent = "...";
+tout.textContent = "Press the button to start!";
 let numKeysPressed = 0;
 
 const octaveBaseFrequency = 110;
@@ -45,19 +45,20 @@ async function start_synth() {
 async function btn_change() {
   if (!sound) {
     await start_synth();
-  }
-  if (sound.active) {
+    printToOut("Sound synthesizer started.");
+    btn.textContent = "Disable";
+  } else if (sound.active) {
     await sound.suspend();
     btn.textContent = "Enable";
   } else {
     await sound.resume();
-    btn.textContent = "Stop";
+    btn.textContent = "Disable";
   }
 }
 
 async function onKeyPress (event) {
   if (!sound) {
-    await start_synth();
+    return;
   }
   if (!event.repeat) {
     let semitones = availableKeys.indexOf(event.key);
@@ -71,7 +72,7 @@ async function onKeyPress (event) {
 
 async function onKeyRelease (event) {
   if (!sound) {
-    await start_synth();
+    return;
   }
   if (availableKeys.includes(event.key)) {
     numKeysPressed -= 1;
