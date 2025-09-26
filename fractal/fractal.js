@@ -10,7 +10,7 @@ async function main() {
     canvas.height = canvas.clientHeight;
     context.fillStyle = "white";
     context.font = "18px monospace";
-    context.fillText("It seems that WebGPU is not supported yet in your browser :(", 10, 28);
+    context.fillText("Could not start WebGPU :(", 10, 28);
     return;
   }
   

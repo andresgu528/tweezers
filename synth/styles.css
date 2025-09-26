@@ -1,5 +1,8 @@
 #control_btn {
     display: block;
+    width: 100%;
+    font-size: large;
+    margin-block: 2em;
 }
 #synth_tout {
     display: block;
