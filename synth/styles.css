@@ -3,5 +3,38 @@
 }
 #synth_tout {
     display: block;
-    width: 100%
+    width: 100%;
+}
+#keyboard {
+    width: 100%;
+    height: 100px;
+    margin-inline: auto;
+    border: solid;
+    display: flex;
+}
+.whitekey {
+    box-sizing: border-box;
+    width: 10%;
+    height: 100%;
+    background-color: white;
+    color: black;
+    margin: 0;
+    position: relative;
+}
+.whitekey:active {
+    color: orange;
+}
+.blackkey {
+    box-sizing: border-box;
+    width: 5%;
+    height: 50%;
+    color: white;
+    background-color: black;
+    margin-left: -2.5%;
+    margin-right: -2.5%;
+    position: relative;
+    z-index: 1;
+}
+.blackkey:active {
+    color: orange;
 }

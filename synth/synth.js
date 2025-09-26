@@ -6,7 +6,7 @@ tout.textContent = "Press the button to start!";
 let numKeysPressed = 0;
 
 const octaveBaseFrequency = 110;
-const availableKeys = "zsxcfvgbnjmk,l.";
+const availableKeys = "zsxcfvgbnjmk,l.-";
 
 let sound;
 
@@ -25,9 +25,15 @@ const makeNoise = {
   `
 }
 
+btn.addEventListener("click", btn_change);
 window.addEventListener("keydown", onKeyPress);
 window.addEventListener("keyup", onKeyRelease);
-btn.addEventListener("click", btn_change);
+const kbd_btns = document.querySelectorAll(".whitekey, .blackkey");
+kbd_btns.forEach(key => {
+  key.addEventListener("pointerdown", keyboardPress);
+  key.addEventListener("pointerup", keyboardRelease);
+});
+
 
 function printToOut(text) {
   tout.value = tout.value + "\n" + text;
@@ -62,10 +68,10 @@ async function onKeyPress (event) {
     return;
   }
   if (!event.repeat) {
-    let semitones = availableKeys.indexOf(event.key);
-    if (semitones >= 0) {
+    let keyId = availableKeys.indexOf(event.key);
+    if (keyId >= 0) {
       numKeysPressed += 1;
-      const frequencyOutput = octaveBaseFrequency * Math.pow(2, semitones/12);
+      const frequencyOutput = octaveBaseFrequency * Math.pow(2, keyId/12);
       sound.updateParams([frequencyOutput]);
     }
   }
@@ -84,7 +90,23 @@ async function onKeyRelease (event) {
   }
 }
 
+function keyboardPress (event) {
+  if (!sound) {
+    return;
+  }
+  const keyId = event.target.dataset.num;
+  numKeysPressed += 1;
+  const frequencyOutput = octaveBaseFrequency * Math.pow(2, keyId/12);
+  sound.updateParams([frequencyOutput]);
+}
 
-
-
-
+function keyboardRelease (event) {
+  if (!sound) {
+    return;
+  }
+  numKeysPressed -= 1;
+  if (numKeysPressed <= 0) {
+    sound.updateParams([0]);
+    numKeysPressed = 0;
+  }
+}
