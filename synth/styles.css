@@ -11,6 +11,7 @@
     margin-inline: auto;
     border: solid;
     display: flex;
+    touch-action: none;
 }
 .whitekey {
     box-sizing: border-box;
