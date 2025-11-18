@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamics in Bloch Ball</title>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <style>
+        #plot { width: 100%; height: 800px; }
+        .controls { 
+            margin: 0; 
+            padding: 5px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            height: 10%
+        }
+        .slider-container { margin: 10px 0; }
+        label { display: inline-block; width: 120px; font-weight: bold; }
+        input[type="range"] { width: 300px; }
+        .value { display: inline-block; width: 60px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    
+
+    <div class="controls">
+        <div class="slider-container">
+            <label for="eps">epsilon:</label>
+            <input type="range" id="eps" min="0.001" max="0.1" step="0.001" value="0.05">
+            <span class="value" id="epsValue">0.05</span>
+        </div>
+        <div class="slider-container">
+            <label for="gamma">gamma:</label>
+            <input type="range" id="gamma" min="0" max="1" step="0.01" value="0">
+            <span class="value" id="gammaValue">0</span>
+        </div>
+    </div>
+    
+    <div id="plot"></div>
+
+    <script>
+        // Current parameters
+        let gamma = 0;
+        let eps = 0.05;
+        let rho = 1;
+        
+        // Store the current plot data for updates
+        let currentTrajectory = null;
+        let currentSphere = null;
+        
+        function lorenz2(t, [x, y, z]) {
+            let b1 = 0;
+            let b2 = -Math.cos(Math.PI / 2 * t);
+            let b3 = -Math.sin(Math.PI / 2 * t);
+            return [
+                (-gamma*(b2*b2+b3*b3)*x + (-b3+gamma*b1*b2)*y + (b2+gamma*b1*b3)*z) / eps,
+                ((b3+gamma*b1*b2)*x - gamma*(b1*b1+b3*b3)*y + (-b1+gamma*b2*b3)*z) / eps,
+                ((-b2+gamma*b1*b3)*x + (b1+gamma*b2*b3)*y - gamma*(b1*b1+b2*b2)*z) / eps
+            ];
+            /*return [
+                (Math.sin(Math.PI / 2 * t) * y - Math.cos(Math.PI / 2 * t) * z) / eps,
+                - Math.sin(Math.PI / 2 * t) * x / eps,
+                Math.cos(Math.PI / 2 * t) * x / eps
+            ];*/
+        }
+
+        // Runge-Kutta 4th order method
+        function rk4(f, t, y, h) {
+            const k1 = f(t, y);
+            const k2 = f(t + h/2, y.map((yi, i) => yi + h/2 * k1[i]));
+            const k3 = f(t + h/2, y.map((yi, i) => yi + h/2 * k2[i]));
+            const k4 = f(t + h, y.map((yi, i) => yi + h * k3[i]));
+            
+            return y.map((yi, i) => yi + h/6 * (k1[i] + 2*k2[i] + 2*k3[i] + k4[i]));
+        }
+
+        // Solve the ODE
+        function solveODE() {
+            const h = 0.001;
+            const steps = 1000;
+            let t = 0;
+            let state = [0, 1, 0];
+            
+            const trajectory = {
+                x: [state[0]],
+                y: [state[1]], 
+                z: [state[2]]
+            };
+
+            for (let i = 0; i < steps; i++) {
+                state = rk4(lorenz2, t, state, h);
+                t += h;
+                
+                trajectory.x.push(state[0]);
+                trajectory.y.push(state[1]);
+                trajectory.z.push(state[2]);
+            }
+
+            return trajectory;
+        }
+        
+        function solveStationary() {
+            const h = 0.001;
+            const steps = 1000;
+            let t = 0;
+            let state = [0, 0, 0];
+            
+            const trajectory = {
+                x: [],
+                y: [], 
+                z: []
+            };
+
+            for (let i = 0; i < steps; i++) {
+                state = [0, Math.cos(Math.PI / 2 * t), Math.sin(Math.PI / 2 * t)];
+                t += h;
+                
+                trajectory.x.push(state[0]);
+                trajectory.y.push(state[1]);
+                trajectory.z.push(state[2]);
+            }
+
+            return trajectory;
+        }
+
+        function solveSlow() {
+            const h = 0.001;
+            const steps = 1000;
+            let t = 0;
+            let state = [0, 0, 0];
+            const coef = eps * Math.PI / (2 * (1 + gamma*gamma));
+            
+            const trajectory = {
+                x: [],
+                y: [], 
+                z: []
+            };
+
+            for (let i = 0; i < steps; i++) {
+                let mcos = Math.cos(Math.PI / 2 * t);
+                let msin = Math.sin(Math.PI / 2 * t);
+                state = [
+                    coef,
+                    mcos + coef*(gamma*msin - gamma*Math.PI*t*mcos/2),
+                    msin + coef*(-gamma*mcos - gamma*Math.PI*t*msin/2)
+                ];
+                t += h;
+                
+                trajectory.x.push(state[0]);
+                trajectory.y.push(state[1]);
+                trajectory.z.push(state[2]);
+            }
+
+            return trajectory;
+        }
+
+        // Create unit sphere (radius = 1)
+        function createUnitSphere(segments = 50) {
+            const sphere = { x: [], y: [], z: [], i: [], j: [], k: [] };
+            
+            // Generate vertices
+            for (let i = 0; i <= segments; i++) {
+                const phi = (i / segments) * Math.PI;
+                for (let j = 0; j <= segments; j++) {
+                    const theta = (j / segments) * 2 * Math.PI;
+                    
+                    const x = Math.sin(phi) * Math.cos(theta);
+                    const y = Math.sin(phi) * Math.sin(theta);
+                    const z = Math.cos(phi);
+                    
+                    sphere.x.push(x);
+                    sphere.y.push(y);
+                    sphere.z.push(z);
+                }
+            }
+
+            // Generate triangles
+            for (let i = 0; i < segments; i++) {
+                for (let j = 0; j < segments; j++) {
+                    const a = i * (segments + 1) + j;
+                    const b = a + 1;
+                    const c = a + (segments + 1);
+                    const d = c + 1;
+                    
+                    // Two triangles per quad
+                    sphere.i.push(a, a, c);
+                    sphere.j.push(b, c, d);
+                    sphere.k.push(c, d, b);
+                }
+            }
+
+            return sphere;
+        }
+
+        // Create the initial plot
+        function createPlot() {
+            currentTrajectory = solveODE();
+            currentStationary = solveStationary();
+            currentSlow = solveSlow();
+            currentSphere = createUnitSphere(50);
+
+            const trace1 = {
+                type: 'scatter3d',
+                mode: 'lines',
+                x: currentTrajectory.x,
+                y: currentTrajectory.y,
+                z: currentTrajectory.z,
+                line: {
+                    width: 2,
+                    color: 'blue'
+                },
+                name: 'Orbit'
+            };
+
+            const trace2 = {
+                type: 'mesh3d',
+                x: currentSphere.x,
+                y: currentSphere.y,
+                z: currentSphere.z,
+                i: currentSphere.i,
+                j: currentSphere.j,
+                k: currentSphere.k,
+                opacity: 0.2,
+                color: 'lightblue',
+                flatshading: false,
+                lighting: {
+                    diffuse: 0.8,
+                    specular: 0.1
+                },
+                lightposition: {
+                    x: 100,
+                    y: 200,
+                    z: 0
+                },
+                name: 'Bloch Sphere'
+            };
+            
+            const trace3 = {
+                type: 'scatter3d',
+                mode: 'lines',
+                x: currentStationary.x,
+                y: currentStationary.y,
+                z: currentStationary.z,
+                line: {
+                    width: 2,
+                    color: 'red'
+                },
+                name: 'Stationary States'
+            };
+
+            const trace4 = {
+                type: 'scatter3d',
+                mode: 'lines',
+                x: currentSlow.x,
+                y: currentSlow.y,
+                z: currentSlow.z,
+                line: {
+                    width: 2,
+                    color: 'green'
+                },
+                name: 'Slow Manifold'
+            };
+
+            const layout = {
+                title: `(gamma=${gamma}, eps=${eps})`,
+                scene: {
+                    xaxis: { 
+                        title: 'X',
+                        range: [-1.5, 1.5]
+                    },
+                    yaxis: { 
+                        title: 'Y', 
+                        range: [-1.5, 1.5]
+                    },
+                    zaxis: { 
+                        title: 'Z',
+                        range: [-1.5, 1.5]
+                    },
+                    camera: {
+                        eye: { x: 1.5, y: 1.5, z: 1.5 }
+                    },
+                    aspectratio: { x: 1, y: 1, z: 1 }
+                },
+                margin: { l: 0, r: 0, b: 0, t: 50 }
+            };
+
+            Plotly.newPlot('plot', [trace1, trace2, trace3, trace4], layout);
+        }
+
+        // Update parameter values from sliders
+        function updateParameters() {
+            gamma = parseFloat(document.getElementById('gamma').value);
+            eps = parseFloat(document.getElementById('eps').value);
+            
+            document.getElementById('gammaValue').textContent = gamma.toFixed(2);
+            document.getElementById('epsValue').textContent = eps.toFixed(3);
+        }
+
+        // Update the plot with new parameters
+        function updatePlot() {
+            updateParameters();
+            
+            // Solve ODE with new parameters
+            currentTrajectory = solveODE();
+            currentStationary = solveStationary();
+            currentSlow = solveSlow();
+            
+            // Update only the trajectory data (much faster than recreating entire plot)
+            Plotly.restyle('plot', 
+                {
+                    x: [currentTrajectory.x],
+                    y: [currentTrajectory.y],
+                    z: [currentTrajectory.z],
+                    line: {
+                        width: 2,
+                        color: 'blue'
+                    }
+                },
+                [0]  // Update only the first trace (the trajectory)
+            );
+            
+            Plotly.restyle('plot', 
+                {
+                    x: [currentStationary.x],
+                    y: [currentStationary.y],
+                    z: [currentStationary.z],
+                    line: {
+                        width: 2,
+                        color: 'red'
+                    }
+                },
+                [2]  // Update only the first trace (the trajectory)
+            );
+
+            Plotly.restyle('plot', 
+                {
+                    x: [currentSlow.x],
+                    y: [currentSlow.y],
+                    z: [currentSlow.z],
+                    line: {
+                        width: 2,
+                        color: 'green'
+                    }
+                },
+                [3]  // Update only the first trace (the trajectory)
+            );
+            
+            // Update the title
+            Plotly.relayout('plot', 
+                {
+                    title: `(gamma=${gamma}, eps=${eps})`
+                }
+            );
+        }
+
+        // Initialize sliders and create plot
+        function initialize() {
+            // Set initial slider values
+            document.getElementById('gamma').value = gamma;
+            document.getElementById('eps').value = eps;
+            
+            // Add event listeners for real-time updates
+            document.getElementById('gamma').addEventListener('input', function() {
+                document.getElementById('gammaValue').textContent = this.value;
+                updatePlot();
+            });
+            
+            document.getElementById('eps').addEventListener('input', function() {
+                document.getElementById('epsValue').textContent = this.value;
+                updatePlot();
+            });
+            
+            // Create initial plot
+            createPlot();
+        }
+
+        // Add a small delay to prevent too many updates while dragging
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Replace event listeners with debounced version
+        function initializeWithDebounce() {
+            // Set initial slider values
+            document.getElementById('gamma').value = gamma;
+            document.getElementById('eps').value = eps;
+            
+            // Create debounced update function (100ms delay)
+            const debouncedUpdate = debounce(updatePlot, 100);
+            
+            // Add event listeners for real-time updates with debouncing
+            document.getElementById('gamma').addEventListener('input', function() {
+                document.getElementById('gammaValue').textContent = this.value;
+                debouncedUpdate();
+            });
+            
+            document.getElementById('eps').addEventListener('input', function() {
+                document.getElementById('epsValue').textContent = this.value;
+                debouncedUpdate();
+            });
+            
+            // Create initial plot
+            createPlot();
+        }
+
+        // Start when page loads (using debounced version for better performance)
+        window.onload = initializeWithDebounce;
+    </script>
+</body>
+</html>
